@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Income Streams - ExpenseVault{% endblock %}
+{% block page_title %}Income Streams{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.3rem; font-weight: 700;">All Logged Income Streams</h2>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">Track salaries, client freelance projects, dividends, and earnings.</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{% url 'export_incomes_csv' %}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+        </a>
+        <a href="{% url 'add_income' %}" class="btn btn-success btn-sm">
+            <i class="fa-solid fa-plus"></i> Record New Income
+        </a>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<form method="GET" action="{% url 'income_list' %}" class="filter-card">
+    <div class="filter-item">
+        <label class="form-label" style="margin-bottom: 4px;">Search Keyword</label>
+        <input type="text" name="q" value="{{ query }}" placeholder="Search by source or notes..." class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
+    </div>
+
+    <div class="filter-item">
+        <label class="form-label" style="margin-bottom: 4px;">Category</label>
+        <select name="category" class="form-select" style="padding: 8px 12px; font-size: 0.88rem;">
+            <option value="">All Income Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"i" %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-item">
+        <label class="form-label" style="margin-bottom: 4px;">Payment Method</label>
+        <select name="payment_method" class="form-select" style="padding: 8px 12px; font-size: 0.88rem;">
+            <option value="">All Methods</option>
+            {% for code, name in payment_methods %}
+            <option value="{{ code }}" {% if selected_payment == code %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-item">
+        <label class="form-label" style="margin-bottom: 4px;">From Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
+    </div>
+
+    <div class="filter-item">
+        <label class="form-label" style="margin-bottom: 4px;">To Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
+    </div>
+
+    <div style="display: flex; gap: 8px; align-items: flex-end;">
+        <button type="submit" class="btn btn-primary btn-sm" style="height: 38px;">
+            <i class="fa-solid fa-filter"></i> Apply Filter
+        </button>
+        <a href="{% url 'income_list' %}" class="btn btn-secondary btn-sm" style="height: 38px;">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+        </a>
+    </div>
+</form>
+
+<!-- Results Summary Badge -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <span style="font-size: 0.88rem; color: var(--text-secondary);">
+        Showing <strong>{{ incomes|length }}</strong> income transactions
+    </span>
+    <span class="category-pill" style="font-size: 0.88rem; padding: 5px 12px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+        Total Filtered: <strong>+{{ currency }}{{ total_filtered|floatformat:2 }}</strong>
+    </span>
+</div>
+
+<!-- Income Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    {% if incomes %}
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Source / Description</th>
+                    <th>Category</th>
+                    <th>Payment Method</th>
+                    <th style="text-align: right;">Amount</th>
+                    <th style="text-align: center; width: 120px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inc in incomes %}
+                <tr>
+                    <td style="color: var(--text-secondary); white-space: nowrap;">
+                        {{ inc.date|date:"d M Y" }}
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #0f172a;">{{ inc.title }}</div>
+                        {% if inc.description %}
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">{{ inc.description|truncatechars:65 }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inc.category %}
+                        <span class="category-pill">
+                            <span class="category-dot" style="background-color: {{ inc.category.color }};"></span>
+                            {{ inc.category.name }}
+                        </span>
+                        {% else %}
+                        <span class="category-pill">General Income</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge-payment">{{ inc.get_payment_method_display }}</span>
+                    </td>
+                    <td style="text-align: right; font-weight: 700; font-size: 1.05rem; color: #34d399; white-space: nowrap;">
+                        +{{ currency }}{{ inc.amount }}
+                    </td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <a href="{% url 'edit_income' inc.pk %}" class="btn btn-secondary btn-sm" title="Edit Income" style="padding: 5px 8px;">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+                        <a href="{% url 'delete_income' inc.pk %}" class="btn btn-outline-danger btn-sm" title="Delete Income" style="padding: 5px 8px;">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 48px 24px; color: var(--text-secondary);">
+        <i class="fa-solid fa-hand-holding-dollar" style="font-size: 2.2rem; color: var(--text-muted); margin-bottom: 12px; display: block;"></i>
+        <p style="font-size: 1rem; font-weight: 600;">No income records found.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Click the button below to add your salary or earnings.</p>
+        <a href="{% url 'add_income' %}" class="btn btn-success btn-sm" style="margin-top: 14px;">
+            <i class="fa-solid fa-plus"></i> Record First Income
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

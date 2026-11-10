@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Account - ExpenseVault{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card" style="max-width: 500px;">
+        <div class="auth-header">
+            <div class="auth-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="brand-title" style="font-size: 1.5rem;">ExpenseVault</div>
+            </div>
+            <h2>Create New Account</h2>
+            <p class="auth-subtitle">Start tracking your income, expenses, and monthly budgets today.</p>
+        </div>
+
+        <form method="POST" action="{% url 'register' %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.username.id_for_label }}">Username *</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.username.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.first_name.id_for_label }}">First Name</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.last_name.id_for_label }}">Last Name</label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.email.id_for_label }}">Email Address</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.email.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.password.id_for_label }}">Password *</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.confirm_password.id_for_label }}">Confirm Password *</label>
+                {{ form.confirm_password }}
+                {% if form.confirm_password.errors %}
+                <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.confirm_password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 10px; font-size: 0.95rem;">
+                <i class="fa-solid fa-user-plus"></i> Register & Get Started
+            </button>
+        </form>
+
+        <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 18px; font-size: 0.88rem; color: var(--text-muted);">
+            Already have an account? 
+            <a href="{% url 'login' %}" style="color: var(--primary); font-weight: 600; text-decoration: none;">Sign In Here</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

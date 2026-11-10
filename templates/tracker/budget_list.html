@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Category Budgets - ExpenseVault{% endblock %}
+{% block page_title %}Monthly Category Budgets{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.3rem; font-weight: 700;">Budgets for {{ month_name }}</h2>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">Set monthly spending limits per category and prevent overspending.</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <form method="GET" action="{% url 'budget_list' %}" style="display: flex; gap: 8px;">
+            <select name="month" class="form-select" style="padding: 6px 12px; font-size: 0.85rem;" onchange="this.form.submit()">
+                {% for m_num, m_txt in months_range %}
+                <option value="{{ m_num }}" {% if selected_month == m_num %}selected{% endif %}>{{ m_txt }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="year" value="{{ selected_year }}" class="form-control" style="width: 85px; padding: 6px 10px; font-size: 0.85rem;" onchange="this.form.submit()">
+        </form>
+        <a href="{% url 'set_budget' %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Set Category Budget
+        </a>
+    </div>
+</div>
+
+<!-- Overall Budget Overview Card -->
+<div class="card" style="margin-bottom: 24px; background: #ffffff;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; align-items: center;">
+        <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Allocated Budget</span>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #4f46e5; margin-top: 4px;">{{ currency }}{{ total_budgeted|floatformat:2 }}</div>
+        </div>
+        <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Spent in Budgeted Categories</span>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #dc2626; margin-top: 4px;">{{ currency }}{{ total_spent_budgeted|floatformat:2 }}</div>
+        </div>
+        <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Active Budgets</span>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #059669; margin-top: 4px;">{{ budget_details|length }} Categories</div>
+        </div>
+    </div>
+</div>
+
+<!-- Budgets Cards Grid -->
+{% if budget_details %}
+<div class="budget-grid">
+    {% for item in budget_details %}
+    <div class="budget-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="metric-icon-wrap" style="background: rgba(255, 255, 255, 0.05); color: {{ item.budget.category.color }}; width: 36px; height: 36px; font-size: 1rem;">
+                    <i class="fa-solid {{ item.budget.category.icon }}"></i>
+                </div>
+                <div>
+                    <h4 style="font-size: 1.05rem; font-weight: 700; margin: 0;">{{ item.budget.category.name }}</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Budget Limit: {{ currency }}{{ item.budget.monthly_limit }}</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 6px;">
+                <a href="{% url 'delete_budget' item.budget.pk %}" class="btn btn-outline-danger btn-sm" style="padding: 4px 8px;" title="Remove Budget">
+                    <i class="fa-solid fa-trash"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container" style="height: 10px;">
+            <div class="progress-bar progress-bar-{{ item.status }}" style="width: {{ item.percent }}%;"></div>
+        </div>
+
+        <!-- Statistics & Status -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.85rem;">
+            <div>
+                <span style="color: var(--text-secondary);">Spent: </span>
+                <strong style="color: #0f172a;">{{ currency }}{{ item.spent }}</strong>
+            </div>
+            <div style="text-align: right;">
+                {% if item.actual_percent >= 100 %}
+                <span class="category-pill" style="background: #fef2f2; color: #dc2626; border-color: #fecaca;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Over Budget by {{ currency }}{{ item.spent|add:item.budget.monthly_limit|floatformat:0 }}
+                </span>
+                {% elif item.actual_percent >= 80 %}
+                <span class="category-pill" style="background: #fffbeb; color: #b45309; border-color: #fde68a;">
+                    <i class="fa-solid fa-bell"></i> {{ item.actual_percent }}% Used
+                </span>
+                {% else %}
+                <span class="category-pill" style="background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;">
+                    <i class="fa-solid fa-circle-check"></i> {{ currency }}{{ item.remaining }} Left
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 48px 24px; color: var(--text-secondary);">
+    <i class="fa-solid fa-bullseye" style="font-size: 2.2rem; color: var(--text-muted); margin-bottom: 12px; display: block;"></i>
+    <p style="font-size: 1rem; font-weight: 600;">No budgets configured for {{ month_name }}.</p>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Setting a budget helps you keep track of spending per category and receive warning alerts.</p>
+    <div style="margin-top: 16px; display: flex; justify-content: center; gap: 10px;">
+        <a href="{% url 'set_budget' %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Set Category Budget
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

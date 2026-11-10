@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Account Settings - ExpenseVault{% endblock %}
+{% block page_title %}User Profile & Preferences{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+    <div class="card">
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+            <div class="brand-badge" style="width: 50px; height: 50px; font-size: 1.3rem;">
+                {{ user.username|make_list|first|upper }}
+            </div>
+            <div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">{{ user.get_full_name|default:user.username }}</h3>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Member since {{ user.date_joined|date:"M Y" }} • Username: @{{ user.username }}</span>
+            </div>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 14px; color: var(--text-main);">Personal Information</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.first_name.id_for_label }}">First Name</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.last_name.id_for_label }}">Last Name</label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.email.id_for_label }}">Email Address</label>
+                    {{ form.email }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+                    {{ form.phone_number }}
+                </div>
+            </div>
+
+            <h4 style="font-size: 0.95rem; font-weight: 600; margin: 18px 0 14px 0; color: var(--text-main); border-top: 1px solid var(--border-color); padding-top: 16px;">Financial Preferences</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.currency_symbol.id_for_label }}">Preferred Currency Symbol</label>
+                    {{ form.currency_symbol }}
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">e.g. ₹ (INR), $ (USD), € (EUR)</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.monthly_savings_goal.id_for_label }}">Monthly Savings Target</label>
+                    {{ form.monthly_savings_goal }}
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Used to calculate goal progress on dashboard</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

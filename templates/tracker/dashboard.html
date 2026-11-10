@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - ExpenseVault{% endblock %}
+{% block page_title %}Financial Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome & Quick Status Banner -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.5rem; font-weight: 700;">Hello, {{ user.first_name|default:user.username }}! 👋</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Here is your financial performance summary for <strong>{{ current_month_name }}</strong>.</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{% url 'export_expenses_csv' %}" class="btn btn-secondary btn-sm" title="Export transactions to CSV spreadsheet">
+            <i class="fa-solid fa-file-arrow-down"></i> Export CSV
+        </a>
+        <a href="{% url 'set_budget' %}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-bullseye"></i> Set Budget
+        </a>
+    </div>
+</div>
+
+<!-- Budget Alerts (if any) -->
+{% if budget_alerts %}
+<div style="margin-bottom: 24px;">
+    {% for alert in budget_alerts %}
+    <div class="alert alert-{{ alert.type }}" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-bell"></i>
+            <div>
+                <strong>{{ alert.category }}:</strong> {{ alert.message }} 
+                (Spent: {{ currency }}{{ alert.spent }} of {{ currency }}{{ alert.limit }})
+            </div>
+        </div>
+        <a href="{% url 'budget_list' %}" class="btn btn-secondary btn-sm">View Budgets</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Key Metrics Grid -->
+<div class="metric-grid">
+    <!-- Income Card -->
+    <div class="metric-card metric-income">
+        <div class="metric-header">
+            <span class="metric-title">Monthly Income</span>
+            <div class="metric-icon-wrap">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ currency }}{{ total_income_month|floatformat:2 }}</div>
+        <div class="metric-badge" style="background: var(--income-bg); color: var(--income-color);">
+            <i class="fa-solid fa-calendar-check"></i> {{ current_month_name }}
+        </div>
+    </div>
+
+    <!-- Expense Card -->
+    <div class="metric-card metric-expense">
+        <div class="metric-header">
+            <span class="metric-title">Monthly Expenses</span>
+            <div class="metric-icon-wrap">
+                <i class="fa-solid fa-arrow-trend-down"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ currency }}{{ total_expense_month|floatformat:2 }}</div>
+        <div class="metric-badge" style="background: var(--expense-bg); color: var(--expense-color);">
+            <i class="fa-solid fa-receipt"></i> Recorded this month
+        </div>
+    </div>
+
+    <!-- Net Savings Card -->
+    <div class="metric-card metric-balance">
+        <div class="metric-header">
+            <span class="metric-title">Net Savings</span>
+            <div class="metric-icon-wrap">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+        </div>
+        <div class="metric-value" style="color: {% if net_savings_month >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {{ currency }}{{ net_savings_month|floatformat:2 }}
+        </div>
+        <div class="metric-badge" style="background: #eef2ff; color: #4f46e5;">
+            Savings Rate: {{ savings_rate }}%
+        </div>
+    </div>
+
+    <!-- Savings Goal Progress Card -->
+    <div class="metric-card metric-savings">
+        <div class="metric-header">
+            <span class="metric-title">Monthly Goal</span>
+            <div class="metric-icon-wrap">
+                <i class="fa-solid fa-piggy-bank"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ currency }}{{ savings_goal|floatformat:0 }}</div>
+        <div class="progress-container" style="margin: 4px 0 6px 0;">
+            <div class="progress-bar progress-bar-success" style="width: {{ savings_progress }}%;"></div>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>{{ savings_progress }}% achieved</span>
+            <a href="{% url 'profile' %}" style="color: #fbbf24; text-decoration: none;">Change Goal</a>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Charts Section -->
+<div class="charts-grid">
+    <!-- Monthly Trend Chart -->
+    <div class="card">
+        <div class="chart-card-header">
+            <div>
+                <h3 class="card-title">Income vs Expense (6-Month Trend)</h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Historical cash flow overview</span>
+            </div>
+            <span class="category-pill"><i class="fa-solid fa-chart-column"></i> Multi-Bar Analysis</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="monthlyTrendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Category Doughnut Chart -->
+    <div class="card">
+        <div class="chart-card-header">
+            <div>
+                <h3 class="card-title">Expense by Category</h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Current month breakdown</span>
+            </div>
+            <span class="category-pill"><i class="fa-solid fa-chart-pie"></i> Distribution</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="categoryDonutChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions & Quick Actions -->
+<div class="card" style="margin-bottom: 30px;">
+    <div class="chart-card-header">
+        <div>
+            <h3 class="card-title">Recent Transactions</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Latest incomes & expenses recorded</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{% url 'expense_list' %}" class="btn btn-secondary btn-sm">All Expenses</a>
+            <a href="{% url 'income_list' %}" class="btn btn-secondary btn-sm">All Incomes</a>
+        </div>
+    </div>
+
+    {% if recent_transactions %}
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Payment Method</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recent_transactions %}
+                <tr>
+                    <td>
+                        {% if item.type == 'income' %}
+                        <span style="color: #10b981; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-circle-arrow-up"></i> Income
+                        </span>
+                        {% else %}
+                        <span style="color: #f43f5e; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-circle-arrow-down"></i> Expense
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--text-secondary);">{{ item.date|date:"d M Y" }}</td>
+                    <td style="font-weight: 600;">{{ item.title }}</td>
+                    <td>
+                        {% if item.category %}
+                        <span class="category-pill">
+                            <span class="category-dot" style="background-color: {{ item.category.color }};"></span>
+                            {{ item.category.name }}
+                        </span>
+                        {% else %}
+                        <span class="category-pill">General</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge-payment">{{ item.payment_method }}</span>
+                    </td>
+                    <td style="text-align: right; font-weight: 700; font-size: 1rem; color: {% if item.type == 'income' %}#059669{% else %}#dc2626{% endif %};">
+                        {% if item.type == 'income' %}+{% else %}-{% endif %}{{ currency }}{{ item.amount }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        <i class="fa-solid fa-receipt" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 12px; display: block;"></i>
+        <p style="font-size: 1rem; font-weight: 600;">No transactions recorded yet</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Click the button below to populate realistic demo transactions or add one manually!</p>
+        <div style="margin-top: 16px; display: flex; justify-content: center; gap: 12px;">
+            <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Add First Expense</a>
+            <a href="{% url 'seed_demo_data' %}" class="btn btn-secondary btn-sm" onclick="return confirm('Load realistic sample data?');"><i class="fa-solid fa-wand-magic-sparkles"></i> Load Demo Data</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // --- Chart.js Configuration ---
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', system-ui, sans-serif";
+
+    // 1. Monthly Trend Chart
+    const trendCtx = document.getElementById('monthlyTrendChart');
+    if (trendCtx) {
+        const labels = {{ monthly_labels|safe }};
+        const incomeData = {{ monthly_income_data|safe }};
+        const expenseData = {{ monthly_expense_data|safe }};
+
+        new Chart(trendCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: incomeData,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.6,
+                    },
+                    {
+                        label: 'Expense',
+                        data: expenseData,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6,
+                        barPercentage: 0.6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 14, font: { weight: 600 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: {{ currency }}${context.parsed.y.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+                        ticks: {
+                            callback: function(value) {
+                                return '{{ currency }}' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Category Donut Chart
+    const donutCtx = document.getElementById('categoryDonutChart');
+    if (donutCtx) {
+        const catLabels = {{ cat_labels|safe }};
+        const catAmounts = {{ cat_amounts|safe }};
+        const catColors = {{ cat_colors|safe }};
+
+        if (catAmounts.length === 0) {
+            // Placeholder when empty
+            new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['No Expenses This Month'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['#e2e8f0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        } else {
+            new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels,
+                    datasets: [{
+                        data: catAmounts,
+                        backgroundColor: catColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, padding: 12, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: {{ currency }}${context.parsed.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

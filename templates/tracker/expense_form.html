@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ExpenseVault{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 640px; margin: 0 auto;">
+    <div class="card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="metric-icon-wrap" style="background: var(--expense-bg); color: var(--expense-color);">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+                <h3 style="font-size: 1.2rem; font-weight: 700;">{{ title }}</h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Fill in the transaction details below</span>
+            </div>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.title.id_for_label }}">Expense Title / Merchant *</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.title.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.amount.id_for_label }}">Amount ({{ currency|default:'₹' }}) *</label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                    <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.amount.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.date.id_for_label }}">Transaction Date *</label>
+                    {{ form.date }}
+                    {% if form.date.errors %}
+                    <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.category.id_for_label }}">Category *</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.category.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.payment_method.id_for_label }}">Payment Method *</label>
+                    {{ form.payment_method }}
+                    {% if form.payment_method.errors %}
+                    <div style="color: #f87171; font-size: 0.8rem; margin-top: 4px;">{{ form.payment_method.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.description.id_for_label }}">Notes & Details (Optional)</label>
+                {{ form.description }}
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    <i class="fa-solid fa-check"></i> {{ btn_text|default:'Save Expense' }}
+                </button>
+                <a href="{% url 'expense_list' %}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

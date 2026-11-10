@@ -1,0 +1,171 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ExpenseVault - Personal Finance & Expense Tracker{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Simple Light Stylesheet (v=4.1 for instant cache reload) -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=4.1">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% if not user.is_authenticated %}auth-body{% endif %}">
+
+    <div class="layout-wrapper">
+        <!-- Simple Light Side Navigation Bar -->
+        {% if user.is_authenticated %}
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{% url 'dashboard' %}" class="sidebar-brand">
+                    <span class="brand-icon"><i class="fa-solid fa-wallet"></i></span>
+                    <span class="brand-text">ExpenseVault</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-group-title">Menu</div>
+                <ul class="nav-list">
+                    <li>
+                        <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'expense_list' %}" class="nav-item {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fa-solid fa-arrow-down"></i>
+                            <span>Expenses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'income_list' %}" class="nav-item {% if 'income' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fa-solid fa-arrow-up"></i>
+                            <span>Income</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'budget_list' %}" class="nav-item {% if 'budget' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fa-solid fa-bullseye"></i>
+                            <span>Budgets</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'reports' %}" class="nav-item {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <span>Reports</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="nav-group-title">Preferences</div>
+                <ul class="nav-list">
+                    <li>
+                        <a href="{% url 'profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                            <i class="fa-solid fa-gear"></i>
+                            <span>Settings & Profile</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'seed_demo_data' %}" class="nav-item" onclick="return confirm('Load realistic sample transactions & budgets for demonstration?');" style="color: #2563eb;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Load Demo Data</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- User Footer Widget -->
+            <div class="sidebar-footer">
+                <div class="user-chip">
+                    <div class="user-chip-avatar">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <div class="user-chip-info">
+                        <span class="user-chip-name">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="user-chip-role">@{{ user.username }}</span>
+                    </div>
+                </div>
+                <a href="{% url 'logout' %}" class="btn-logout" title="Sign Out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper {% if not user.is_authenticated %}auth-mode{% endif %}">
+            <!-- Simple Top Header (only when logged in) -->
+            {% if user.is_authenticated %}
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle Sidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h1 class="header-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+
+                <div class="header-right">
+                    <a href="{% url 'add_expense' %}" class="btn btn-danger btn-sm">
+                        <i class="fa-solid fa-plus"></i> New Expense
+                    </a>
+                    <a href="{% url 'add_income' %}" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-plus"></i> Add Income
+                    </a>
+                </div>
+            </header>
+            {% endif %}
+
+            <!-- Page Content -->
+            <main class="content-area {% if not user.is_authenticated %}auth-content{% endif %}">
+                <!-- Flash Messages Toast / Alerts -->
+                {% if messages %}
+                <div class="messages-container">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {% if message.tags == 'success' %}
+                            <i class="fa-solid fa-circle-check"></i>
+                        {% elif message.tags == 'error' or message.tags == 'danger' %}
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-info"></i>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Sidebar Toggle Script for Mobile -->
+    <script>
+        const menuBtn = document.getElementById('menuToggleBtn');
+        const sidebar = document.getElementById('sidebar');
+        if (menuBtn && sidebar) {
+            menuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+        }
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

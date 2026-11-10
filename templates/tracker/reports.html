@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analytics & Reports - ExpenseVault{% endblock %}
+{% block page_title %}Financial Analytics & Reports{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.3rem; font-weight: 700;">Financial Year {{ current_year }} Performance</h2>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">Comprehensive audit of cash flow, category distributions, and payment methods.</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button onclick="window.print()" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-print"></i> Print Report
+        </button>
+        <a href="{% url 'export_expenses_csv' %}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-file-csv"></i> Download CSV
+        </a>
+    </div>
+</div>
+
+<!-- Annual Metrics Cards -->
+<div class="metric-grid">
+    <div class="metric-card metric-income">
+        <div class="metric-header">
+            <span class="metric-title">Annual Gross Income</span>
+            <div class="metric-icon-wrap"><i class="fa-solid fa-vault"></i></div>
+        </div>
+        <div class="metric-value">{{ currency }}{{ annual_income|floatformat:2 }}</div>
+        <div class="metric-badge" style="background: var(--income-bg); color: var(--income-color);">Calendar Year {{ current_year }}</div>
+    </div>
+
+    <div class="metric-card metric-expense">
+        <div class="metric-header">
+            <span class="metric-title">Annual Total Outflow</span>
+            <div class="metric-icon-wrap"><i class="fa-solid fa-chart-line-down"></i></div>
+        </div>
+        <div class="metric-value">{{ currency }}{{ annual_expenses|floatformat:2 }}</div>
+        <div class="metric-badge" style="background: var(--expense-bg); color: var(--expense-color);">All recorded spending</div>
+    </div>
+
+    <div class="metric-card metric-balance">
+        <div class="metric-header">
+            <span class="metric-title">Net Annual Accumulation</span>
+            <div class="metric-icon-wrap"><i class="fa-solid fa-coins"></i></div>
+        </div>
+        <div class="metric-value" style="color: {% if annual_savings >= 0 %}#34d399{% else %}#f87171{% endif %};">
+            {{ currency }}{{ annual_savings|floatformat:2 }}
+        </div>
+        <div class="metric-badge" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc;">Surplus / Deficit</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 24px; margin-bottom: 28px;">
+    <!-- 12-Month Table Breakdown -->
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color);">
+            <h3 class="card-title">Monthly Breakdown ({{ current_year }})</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th style="text-align: right;">Income</th>
+                        <th style="text-align: right;">Expenses</th>
+                        <th style="text-align: right;">Net Savings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in monthly_stats %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ m.month }}</td>
+                        <td style="text-align: right; color: #34d399;">+{{ currency }}{{ m.income|floatformat:2 }}</td>
+                        <td style="text-align: right; color: #fb7185;">-{{ currency }}{{ m.expense|floatformat:2 }}</td>
+                        <td style="text-align: right; font-weight: 700; color: {% if m.savings >= 0 %}#6ee7b7{% else %}#f87171{% endif %};">
+                            {{ currency }}{{ m.savings|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Payment Channels Breakdown -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="card">
+            <div class="chart-card-header">
+                <h3 class="card-title">Spending by Payment Channel</h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for p in payment_breakdown %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-surface-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-credit-card" style="color: #818cf8;"></i>
+                        <span style="font-weight: 600; font-size: 0.88rem;">{{ p.payment_method }}</span>
+                    </div>
+                    <span style="font-weight: 700; color: #dc2626; font-size: 0.95rem;">{{ currency }}{{ p.total|floatformat:2 }}</span>
+                </div>
+                {% empty %}
+                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 18px;">No transaction data available</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- All-Time Category Distribution -->
+        <div class="card">
+            <div class="chart-card-header">
+                <h3 class="card-title">Top Expense Categories</h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for cat in all_cat_breakdown|slice:":5" %}
+                <div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+                        <span>
+                            <span class="category-dot" style="background-color: {{ cat.category__color }}; display: inline-block; vertical-align: middle; margin-right: 6px;"></span>
+                            {{ cat.category__name|default:'Uncategorized' }} ({{ cat.count }} transactions)
+                        </span>
+                        <strong>{{ currency }}{{ cat.total|floatformat:2 }}</strong>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 18px;">No category data available</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
