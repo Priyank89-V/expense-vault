@@ -293,3 +293,4 @@ As per project guidelines:
 
 ## 📄 License
 This project is developed for educational purposes as part of Semester 5 Python Web Framework coursework.
+
